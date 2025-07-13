@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>한국인만 탈출 가능한 방탈출 게임</title>
+    <title>한국인만 탈출 가능한 방탈출 게임 (반응형 + 스크롤)</title>
     <style>
         /* 기본 스타일 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             background-color: #000;
             color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             min-height: 100vh;
             margin: 0;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: block;
         }
 
         h1, h2 {
@@ -42,6 +41,13 @@
             justify-content: center;
             text-align: center;
             padding: 40px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 1000;
         }
         #start-screen h1 { font-size: 3em; }
         #best-record-display { margin: 20px 0; font-size: 1.2em; color: #00bcd4; }
@@ -56,21 +62,23 @@
         /* 게임 컨테이너 */
         #game-container {
             position: relative;
-            width: 900px;
-            max-width: 95%;
+            width: 95vw;
+            max-width: 900px;
             border: 2px solid #fff;
             background-color: #000;
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
             text-align: center;
-            display: none; /* 초기에는 숨김 */
+            display: none;
+            margin: 20px auto;
+            padding-bottom: 20px;
         }
 
         /* 상단 바 (좌: 틀린횟수, 우: 타이머, 단서) */
         #wrong-answer-counter {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 1.2em;
+            top: 15px;
+            left: 15px;
+            font-size: 1.1em;
             font-weight: bold;
             color: #ff6b6b;
             background-color: rgba(0,0,0,0.7);
@@ -81,14 +89,14 @@
         #top-bar {
             position: absolute;
             top: 15px;
-            right: 20px;
+            right: 15px;
             display: flex;
-            gap: 15px;
+            gap: 10px;
             align-items: center;
             z-index: 10;
         }
         #timer {
-            font-size: 1.5em;
+            font-size: 1.3em;
             font-weight: bold;
             color: #ff4545;
             background-color: rgba(0,0,0,0.7);
@@ -96,7 +104,7 @@
             border-radius: 5px;
         }
         #era-clue-button {
-            padding: 8px 15px;
+            padding: 8px 12px;
             font-size: 0.9em;
             background-color: #00bcd4;
             color: white;
@@ -104,8 +112,20 @@
         #era-clue-button:disabled { background-color: #555; cursor: not-allowed; }
 
         /* 방 화면 */
-        #room-screen { position: relative; width: 100%; padding-top: 66.66%; }
-        #room-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #room-screen {
+            position: relative;
+            width: 100%;
+            padding-top: 66.66%;
+            background-color: #111;
+        }
+        #room-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
 
         /* 클릭 가능한 오브젝트 */
         .clickable-object {
@@ -121,7 +141,7 @@
         /* 컨트롤 패널 */
         #controls { padding: 20px; background-color: #222; }
         #hints-list { list-style-type: '💡 '; padding-left: 20px; text-align: left; min-height: 50px; }
-        #password-form { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+        #password-form { display: flex; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         #password-input { padding: 10px; font-size: 1em; width: 200px; border-radius: 5px; border: 1px solid #ccc; }
         #password-submit { padding: 10px 20px; font-size: 1em; background-color: #ffc107; color: #000; }
         
@@ -135,7 +155,7 @@
 
         /* 게임 오버 화면 스타일 */
         #game-over-screen {
-            display: none; /* 초기에는 숨김 */
+            display: none;
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background-color: rgba(0, 0, 0, 0.9);
@@ -163,6 +183,123 @@
             font-size: 1.2em;
             background-color: #00bcd4;
             color: white;
+        }
+
+        /* --- Custom Modal Styles --- */
+        .modal-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 3000; /* Higher than other game elements */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #222;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            animation: fadeIn 0.3s ease-out;
+            color: #fff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-content p {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            word-wrap: break-word; /* Long messages break lines */
+        }
+
+        .modal-input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1.1em;
+            background-color: #333;
+            color: #fff;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 1em;
+            border-radius: 5px;
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .modal-buttons .modal-cancel-button {
+            background-color: #555;
+            color: #fff;
+        }
+        /* End Custom Modal Styles */
+
+        /* --- 반응형 디자인을 위한 미디어 쿼리 --- */
+
+        /* 태블릿 사이즈 (768px 이하) */
+        @media (max-width: 768px) {
+            #start-screen h1 { font-size: 2.5em; }
+            #start-button { font-size: 1.3em; padding: 12px 25px; }
+            
+            #room-title { font-size: 1.5em; }
+            #controls h2 { font-size: 1.2em; }
+
+            #password-form {
+                flex-direction: column;
+                align-items: center;
+            }
+            #password-input { width: 80%; }
+        }
+
+        /* 모바일 사이즈 (480px 이하) */
+        @media (max-width: 480px) {
+            #start-screen h1 { font-size: 2em; }
+            #start-button { font-size: 1.1em; padding: 10px 20px; }
+            #best-record-display { font-size: 1em; }
+
+            #game-container { border: none; margin: 10px auto; }
+
+            #wrong-answer-counter { font-size: 0.9em; top: 10px; left: 10px; }
+            #top-bar { top: 10px; right: 10px; gap: 5px; }
+            #timer { font-size: 1em; }
+            #era-clue-button { font-size: 0.8em; padding: 6px 10px; }
+
+            #room-title { font-size: 1.2em; margin-top: 50px; }
+            #controls { padding: 15px; }
+            #hints-list { padding-left: 15px; font-size: 0.9em; }
+            
+            #game-over-screen p { font-size: 1.2em; }
+            #restart-from-game-over { font-size: 1em; }
+
+            .modal-content {
+                padding: 20px;
+                width: 95%; /* Adjust width for smaller screens */
+            }
+            .modal-content p {
+                font-size: 1.1em;
+            }
+            .modal-input {
+                font-size: 1em;
+            }
+            .modal-buttons button {
+                padding: 8px 15px;
+                font-size: 0.9em;
+                margin: 0 5px;
+            }
         }
     </style>
 </head>
@@ -206,8 +343,20 @@
     <!-- 게임 오버 화면 -->
     <div id="game-over-screen">
         <img src="https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%82%E1%85%A1%E1%84%85%E1%85%B3%E1%86%AF%20%E1%84%80%E1%85%A1%E1%84%85%E1%85%B5%E1%84%8F%E1%85%B5%E1%86%B7.jpeg?raw=true" alt="게임 오버 이미지">
-        <p>당신은 이 방을 평생 탈출 못 할것 같습니다. 역사 공부나 하세요. :)</p>
+        <p>4개나 틀린 당신은 이 방을 평생 탈출 못 할것 같습니다. 이런 것 하지 말고 역사 공부나 하세요. :)</p>
         <button id="restart-from-game-over">처음으로</button>
+    </div>
+
+    <!-- Custom Modal Structure -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <input type="text" id="modal-input" class="modal-input" placeholder="입력하세요...">
+            <div class="modal-buttons">
+                <button id="modal-ok">확인</button>
+                <button id="modal-cancel" class="modal-cancel-button">취소</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -215,24 +364,24 @@
             const gameData = [
                 {
                     name: '3.1운동',
-                    image: 'https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%83%E1%85%A9%E1%86%A8%E1%84%85%E1%85%B5%E1%86%B8%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%83%E1%85%A9%E1%86%BC.jpg?raw=true',
+                    image : 'https://raw.githubusercontent.com/Jungi-Choi/escape_room/1746c54b4ba88328c90d25d91ca321d64c266fbc/%E1%84%83%E1%85%A9%E1%86%A8%E1%84%85%E1%85%B5%E1%86%B8%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%83%E1%85%A9%E1%86%BC.jpg',
                     password: '1919독립',
-                    objects: [ { id: 'obj1', pos: { top: '50%', left: '25%', width: '7%', height: '10%' }, puzzle: '이 종이의 이름은 무엇일까요? (초성힌트: ㄷㄹㅅㅇㅅ)', answer: '독립선언서', hint: '이 방의 비밀번호와는 직접적인 관련이 없는 단서이다.', validation: { type: 'length', value: 5 } } ],
+                    objects: [ { id: 'obj1', pos: { top: '50%', left: '25%', width: '7%', height: '10%' }, puzzle: '이 종이의 이름은 무엇일까요? (초성힌트: ㄷㄹㅅㅇㅁ)', answer: '독립선언문', hint: '이 방의 비밀번호와는 직접적인 관련이 없는 단서이다.', validation: { type: 'length', value: 5 } } ],
                     eraPuzzles: [ { id: 'era1', puzzle: '3.1운동이 일어난 연도는? (숫자 4자리)', answer: '1919', hint: "비밀번호의 앞 4자리는 [ 1919 ] 이다.", validation: { type: 'regex', value: /^\d{4}$/ } }, { id: 'era2', puzzle: '3.1운동의 목적은 무엇일까요? (조선의 OO)', answer: '독립', hint: "비밀번호의 뒤 2글자는 [ 독립 ] 이다.", validation: { type: 'length', value: 2 } } ]
                 },
                 {
                     name: '두 번째 방: 고구려의 기상',
-                    image: 'https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%89%E1%85%AE%E1%84%85%E1%85%A7%E1%86%B8%E1%84%83%E1%85%A9.jpg?raw=true',
+                    image : 'https://raw.githubusercontent.com/Jungi-Choi/escape_room/1746c54b4ba88328c90d25d91ca321d64c266fbc/%E1%84%89%E1%85%AE%E1%84%85%E1%85%A7%E1%86%B8%E1%84%83%E1%85%A9.jpg',
                     password: '391',
-                    objects: [ { id: 'obj1', pos: { top: '30%', left: '5%', width: '30%', height: '50%' }, puzzle: "고구려 역사상 가장 넓은 영토를 차지했던 왕의 이름은 '광개토대왕'입니다. 그의 이름에서 숫자 3에 해당하는 글자는 무엇일까요?", answer: '광', hint: "비밀번호의 첫 번째 숫자는 [ 3 ] 이다." }, { id: 'obj2', pos: { top: '55%', left: '60%', width: '25%', height: '30%' }, puzzle: "광개토대왕의 아들로, 아버지의 업적을 기리는 비석을 세운 왕은 누구일까요?", answer: '장수왕', hint: "장수왕이 왕위에 있었던 기간(79년)에서 70을 빼면? 비밀번호의 두 번째 숫자는 [ 9 ] 이다." } ],
-                    eraPuzzles: [ { id: 'era1', puzzle: "광개토대왕이 왕위에 오른 해는 몇 년일까요?", answer: '391', hint: "비밀번호의 세 번째 숫자는 [ 1 ] 이다." } ]
+                    objects: [ { id: 'obj1', pos: { top: '30%', left: '5%', width: '30%', height: '50%' }, puzzle: "이 사람은 무슨 동물을 사냥라고 있나요? (3글자)", answer: '호랑이', hint: "비밀번호의 첫 번째 숫자는 [ 3 ] 이다." } ],
+                    eraPuzzles: [ { id: 'era1', puzzle: "광개토대왕이 왕위에 오른 해는 몇 년일까요?", answer: '391', hint: "비밀번호의 세 번째 숫자는 [ 1 ] 이다.", validation: { type: 'regex', value: /^\d{3}$/ } }, { id: 'era2' , puzzle: "광개토대왕의 아들로, 아버지의 업적을 기리는 비석을 세운 왕은 누구일까요?", answer: '장수왕', hint: "장수왕이 왕위에 있었던 기간(79년)에서 70을 빼면? 비밀번호의 두 번째 숫자는 [ 9 ] 이다." , validation: { type: 'length', value: 3 }} ]
                 },
                 {
                     name: '세 번째 방: 과학의 발전',
-                    image: 'https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%8E%E1%85%B3%E1%86%A8%E1%84%8B%E1%85%AE%E1%84%80%E1%85%B5.png?raw=true',
+                    image : 'https://raw.githubusercontent.com/Jungi-Choi/escape_room/1746c54b4ba88328c90d25d91ca321d64c266fbc/%E1%84%8E%E1%85%B3%E1%86%A8%E1%84%8B%E1%85%AE%E1%84%80%E1%85%B5.png',
                     password: '1443',
-                    objects: [ { id: 'obj1', pos: { top: '20%', left: '30%', width: '40%', height: '60%' }, puzzle: "사진 속 '측우기'가 발명된 연도의 앞 두 자리는 무엇일까요?", answer: '14', hint: "비밀번호의 앞 두 자리는 [ 14 ] 이다." }, { id: 'obj2', pos: { top: '5%', left: '5%', width: '20%', height: '30%' }, puzzle: "세종대왕이 한글을 반포한 해는 1446년입니다. 측우기가 발명된 해(1441년)와 몇 년 차이가 날까요?", answer: '5', hint: "비밀번호의 세 번째 숫자는 [ 4 ]이다. (5-1)" } ],
-                    eraPuzzles: [ { id: 'era1', puzzle: "세종대왕 시대의 또 다른 위대한 과학 발명품으로, 스스로 시간을 알려주는 물시계의 이름은 무엇일까요?", answer: '자격루', hint: "세종대왕이 훈민정음을 창제한 해는 144[ 3 ]년이다." } ]
+                    objects: [ { id: 'obj1', pos: { top: '20%', left: '30%', width: '40%', height: '60%' }, puzzle: "사진 속 '측우기'가 발명된 연도는?", answer: '1442', hint: "비밀번호의 앞 두 자리는 [ 14 ] 이다." } ],
+                    eraPuzzles: [ { id: 'era1', puzzle: "세종대왕 시대의 또 다른 위대한 과학 발명품으로, 스스로 시간을 알려주는 물시계의 이름은 무엇일까요?", answer: '자격루', hint: "세종대왕이 훈민정음을 창제한 해는 144[ 3 ]년이다." }, { id: 'era2', puzzle: "세종대왕이 한글을 반포한 해는 1446년입니다. 측우기가 발명된 해(1441년)와 몇 년 차이가 날까요?", answer: '5', hint: "비밀번호의 세 번째 숫자는 [ 4 ]이다. (5-1)" } ]
                 }
             ];
 
@@ -254,6 +403,13 @@
             const gameOverScreen = document.getElementById('game-over-screen');
             const restartFromGameOverButton = document.getElementById('restart-from-game-over');
 
+            // Custom Modal Elements
+            const customModal = document.getElementById('custom-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalInput = document.getElementById('modal-input');
+            const modalOkButton = document.getElementById('modal-ok');
+            const modalCancelButton = document.getElementById('modal-cancel');
+
             // 게임 상태 변수
             let currentRoomIndex = 0;
             let solvedPuzzles = [];
@@ -262,6 +418,82 @@
             let bestRecord = JSON.parse(localStorage.getItem('bestRecord')) || { name: null, time: Infinity };
             let wrongAnswerCount = 0;
             const MAX_WRONG_ANSWERS = 4;
+
+            // --- Custom Modal Functions ---
+            function showAlert(message) {
+                return new Promise(resolve => {
+                    modalMessage.textContent = message;
+                    modalInput.style.display = 'none'; // Hide input for alerts
+                    modalCancelButton.style.display = 'none'; // Hide cancel button for alerts
+                    customModal.style.display = 'flex'; // Show modal
+
+                    // Remove existing listeners to prevent multiple calls
+                    modalOkButton.onclick = null;
+                    modalOkButton.addEventListener('click', () => {
+                        customModal.style.display = 'none';
+                        resolve();
+                    }, { once: true }); // Use { once: true } for auto-removal
+                    
+                    // Allow pressing Enter to close alert
+                    document.addEventListener('keydown', function enterKeyListener(event) {
+                        if (event.key === 'Enter' && customModal.style.display === 'flex' && modalInput.style.display === 'none') {
+                            modalOkButton.click();
+                            document.removeEventListener('keydown', enterKeyListener);
+                        }
+                    });
+                });
+            }
+
+            async function showPrompt(message, validation = null) {
+                return new Promise(resolve => {
+                    modalMessage.textContent = message;
+                    modalInput.value = ''; // Clear previous input
+                    modalInput.style.display = 'block'; // Show input for prompts
+                    modalCancelButton.style.display = 'inline-block'; // Show cancel button for prompts
+                    customModal.style.display = 'flex'; // Show modal
+                    modalInput.focus(); // Focus on the input field
+
+                    const handleOk = async () => {
+                        const userAnswer = modalInput.value;
+                        let isValid = true;
+                        let errorMsg = '';
+
+                        if (validation) {
+                            if (validation.type === 'length' && userAnswer.length !== validation.value) {
+                                isValid = false;
+                                errorMsg = `${validation.value}글자로 입력해주세요.`;
+                            } else if (validation.type === 'regex' && !validation.value.test(userAnswer)) {
+                                isValid = false;
+                                errorMsg = '형식에 맞게 입력해주세요. (예: 4자리 숫자)';
+                            }
+                        }
+
+                        if (isValid) {
+                            customModal.style.display = 'none';
+                            resolve(userAnswer);
+                        } else {
+                            await showAlert(errorMsg); // Use custom alert for validation errors
+                            modalInput.focus(); // Keep focus on input after error
+                        }
+                    };
+
+                    const handleCancel = () => {
+                        customModal.style.display = 'none';
+                        resolve(null);
+                    };
+
+                    // Remove existing listeners to prevent multiple calls
+                    modalOkButton.onclick = null;
+                    modalCancelButton.onclick = null;
+                    modalInput.onkeyup = null;
+
+                    modalOkButton.addEventListener('click', handleOk);
+                    modalCancelButton.addEventListener('click', handleCancel);
+                    modalInput.addEventListener('keyup', (event) => {
+                        if (event.key === 'Enter') handleOk();
+                    });
+                });
+            }
 
             // --- 유틸리티 함수 ---
             const formatTime = (seconds) => {
@@ -275,27 +507,6 @@
                     recordText.textContent = `${bestRecord.name} - ${formatTime(bestRecord.time)}`;
                 } else {
                     recordText.textContent = '아직 기록이 없습니다.';
-                }
-            };
-
-            const getValidatedInput = (puzzle, validation) => {
-                let userAnswer;
-                while (true) {
-                    userAnswer = prompt(puzzle);
-                    if (userAnswer === null) return null;
-                    let isValid = true;
-                    let errorMsg = '';
-                    if (validation) {
-                        if (validation.type === 'length' && userAnswer.length !== validation.value) {
-                            isValid = false;
-                            errorMsg = `${validation.value}글자로 입력해주세요.`;
-                        } else if (validation.type === 'regex' && !validation.value.test(userAnswer)) {
-                            isValid = false;
-                            errorMsg = '형식에 맞게 입력해주세요. (예: 4자리 숫자)';
-                        }
-                    }
-                    if (isValid) return userAnswer;
-                    alert(errorMsg);
                 }
             };
 
@@ -333,15 +544,15 @@
                 loadRoom(currentRoomIndex);
             };
 
-            const endGame = () => {
+            const endGame = async () => {
                 stopTimer();
-                alert(`탈출 성공! 기록: ${formatTime(elapsedSeconds)}`);
+                await showAlert(`탈출 성공! 기록: ${formatTime(elapsedSeconds)}`);
                 if (elapsedSeconds < bestRecord.time) {
-                    const name = prompt(`최고 기록 갱신! 이름을 입력해주세요:`);
+                    const name = await showPrompt(`최고 기록 갱신! 이름을 입력해주세요:`);
                     if (name) {
                         bestRecord = { name, time: elapsedSeconds };
                         localStorage.setItem('bestRecord', JSON.stringify(bestRecord));
-                        alert(`${name}님의 새로운 최고 기록이 저장되었습니다!`);
+                        await showAlert(`${name}님의 새로운 최고 기록이 저장되었습니다!`);
                     }
                 }
                 gameContainer.style.display = 'none';
@@ -384,69 +595,70 @@
             };
 
             // --- 이벤트 핸들러 ---
-            const handlePuzzleSolved = (puzzle) => {
-                alert('정답입니다! 힌트를 획득했습니다.');
+            const handlePuzzleSolved = async (puzzle) => {
+                await showAlert('정답입니다! 힌트를 획득했습니다.');
                 const hintElement = document.createElement('li');
                 hintElement.textContent = puzzle.hint;
                 hintsList.appendChild(hintElement);
                 solvedPuzzles.push(puzzle.id);
             };
 
-            const handleWrongAnswer = () => {
+            const handleWrongAnswer = async () => {
                 wrongAnswerCount++;
                 updateWrongAnswerDisplay();
                 if (wrongAnswerCount >= MAX_WRONG_ANSWERS) {
-                    setTimeout(triggerGameOver, 100);
+                    // Give a moment for wrong answer display to update before game over
+                    setTimeout(triggerGameOver, 100); 
                 } else {
-                    alert('오답입니다. 다시 시도해 보세요.');
+                    await showAlert('오답입니다. 다시 시도해 보세요.');
                 }
             };
 
-            const handleObjectClick = (obj) => {
+            const handleObjectClick = async (obj) => {
                 if (solvedPuzzles.includes(obj.id)) {
-                    alert('이미 해결한 문제입니다.');
+                    await showAlert('이미 해결한 문제입니다.');
                     return;
                 }
-                const userAnswer = getValidatedInput(obj.puzzle, obj.validation);
-                if (userAnswer === null) return;
+                const userAnswer = await showPrompt(obj.puzzle, obj.validation);
+                if (userAnswer === null) return; // User cancelled
 
                 if (userAnswer.toLowerCase().trim() === obj.answer.toLowerCase().trim()) {
-                    handlePuzzleSolved(obj);
+                    await handlePuzzleSolved(obj);
                     obj.element.classList.add('solved');
                 } else {
-                    handleWrongAnswer();
+                    await handleWrongAnswer();
                 }
             };
             
-            const handleEraClueClick = () => {
+            const handleEraClueClick = async () => {
                 const room = gameData[currentRoomIndex];
                 const unsolvedPuzzle = room.eraPuzzles.find(p => !solvedPuzzles.includes(p.id));
                 if (!unsolvedPuzzle) {
-                    alert('이곳의 모든 단서를 찾았습니다.');
+                    await showAlert('이곳의 모든 단서를 찾았습니다.');
                     return;
                 }
-                const userAnswer = getValidatedInput(unsolvedPuzzle.puzzle, unsolvedPuzzle.validation);
-                if (userAnswer === null) return;
+                const userAnswer = await showPrompt(unsolvedPuzzle.puzzle, unsolvedPuzzle.validation);
+                if (userAnswer === null) return; // User cancelled
 
                 if (userAnswer.toLowerCase().trim() === unsolvedPuzzle.answer.toLowerCase().trim()) {
-                    handlePuzzleSolved(unsolvedPuzzle);
+                    await handlePuzzleSolved(unsolvedPuzzle);
                     updateEraClueButtonState();
                 } else {
-                    handleWrongAnswer();
+                    await handleWrongAnswer();
                 }
             };
 
-            const checkPassword = () => {
+            const checkPassword = async () => {
                 const room = gameData[currentRoomIndex];
                 if (passwordInput.value.trim() === room.password) {
                     if (currentRoomIndex < gameData.length - 1) {
-                        alert('정답! 다음 방으로 이동합니다.');
+                        await showAlert('정답! 다음 방으로 이동합니다.');
                         transitionToNextRoom();
                     } else {
-                        endGame();
+                        await endGame();
                     }
                 } else {
-                    alert('비밀번호가 틀렸습니다.');
+                    await showAlert('비밀번호가 틀렸습니다.');
                 }
             };
 

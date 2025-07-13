@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국인만 탈출 가능한 방탈출 게임</title>
+    <style>
+        /* 기본 스타일 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1, h2 {
+            color: #ffc107;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        /* 시작 화면 */
+        #start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px;
+        }
+        #start-screen h1 { font-size: 3em; }
+        #best-record-display { margin: 20px 0; font-size: 1.2em; color: #00bcd4; }
+        #start-button {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            background: linear-gradient(45deg, #ffc107, #ff9800);
+            color: #000;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* 게임 컨테이너 */
+        #game-container {
+            position: relative;
+            width: 900px;
+            max-width: 95%;
+            border: 2px solid #fff;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            text-align: center;
+            display: none; /* 초기에는 숨김 */
+        }
+
+        /* 상단 바 (좌: 틀린횟수, 우: 타이머, 단서) */
+        #wrong-answer-counter {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff6b6b;
+            background-color: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+        #top-bar {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            z-index: 10;
+        }
+        #timer {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ff4545;
+            background-color: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #era-clue-button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            background-color: #00bcd4;
+            color: white;
+        }
+        #era-clue-button:disabled { background-color: #555; cursor: not-allowed; }
+
+        /* 방 화면 */
+        #room-screen { position: relative; width: 100%; padding-top: 66.66%; }
+        #room-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* 클릭 가능한 오브젝트 */
+        .clickable-object {
+            position: absolute;
+            background-color: rgba(255, 255, 0, 0.2);
+            border: 2px dashed yellow;
+            cursor: pointer;
+            transition: background-color 0.3s, border 0.3s;
+        }
+        .clickable-object:hover { background-color: rgba(255, 0, 0, 0.4); border: 2px solid red; }
+        .clickable-object.solved { background-color: rgba(0, 255, 0, 0.3); border: 2px solid limegreen; cursor: not-allowed; }
+
+        /* 컨트롤 패널 */
+        #controls { padding: 20px; background-color: #222; }
+        #hints-list { list-style-type: '💡 '; padding-left: 20px; text-align: left; min-height: 50px; }
+        #password-form { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+        #password-input { padding: 10px; font-size: 1em; width: 200px; border-radius: 5px; border: 1px solid #ccc; }
+        #password-submit { padding: 10px 20px; font-size: 1em; background-color: #ffc107; color: #000; }
+        
+        /* 방 전환 애니메이션 오버레이 */
+        #transition-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; opacity: 0; z-index: 999;
+            pointer-events: none; transition: opacity 0.5s ease-in-out;
+        }
+        #transition-overlay.active { opacity: 1; }
+
+        /* 게임 오버 화면 스타일 */
+        #game-over-screen {
+            display: none; /* 초기에는 숨김 */
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        #game-over-screen img {
+            max-width: 80%;
+            max-height: 50vh;
+            border-radius: 10px;
+            border: 2px solid #ffc107;
+        }
+        #game-over-screen p {
+            font-size: 1.5em;
+            color: #ff6b6b;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        #restart-from-game-over {
+            padding: 10px 25px;
+            font-size: 1.2em;
+            background-color: #00bcd4;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 시작 화면 -->
+    <div id="start-screen">
+        <h1>한국인만 탈출 가능한 방탈출</h1>
+        <div id="best-record-display">
+            <h2>최고 기록</h2>
+            <p id="record-text">아직 기록이 없습니다.</p>
+        </div>
+        <button id="start-button">게임 시작</button>
+    </div>
+
+    <!-- 게임 컨테이너 -->
+    <div id="game-container">
+        <div id="wrong-answer-counter"></div>
+        <div id="top-bar">
+            <div id="timer">00:00</div>
+            <button id="era-clue-button"></button>
+        </div>
+        <h1 id="room-title"></h1>
+        <div id="room-screen">
+            <img id="room-image" src="" alt="방 이미지">
+            <div id="objects-container"></div>
+        </div>
+        <div id="controls">
+            <h2>획득한 힌트</h2>
+            <ul id="hints-list"></ul>
+            <div id="password-form">
+                <input type="text" id="password-input" placeholder="비밀번호를 입력하세요">
+                <button id="password-submit">탈출 시도</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 방 전환 애니메이션용 오버레이 -->
+    <div id="transition-overlay"></div>
+
+    <!-- 게임 오버 화면 -->
+    <div id="game-over-screen">
+        <img src="https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%82%E1%85%A1%E1%84%85%E1%85%B3%E1%86%AF%20%E1%84%80%E1%85%A1%E1%84%85%E1%85%B5%E1%84%8F%E1%85%B5%E1%86%B7.jpeg?raw=true" alt="게임 오버 이미지">
+        <p>당신은 이 방을 평생 탈출 못 할것 같습니다. 역사 공부나 하세요. :)</p>
+        <button id="restart-from-game-over">처음으로</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameData = [
+                {
+                    name: '3.1운동',
+                    image: 'https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%83%E1%85%A9%E1%86%A8%E1%84%85%E1%85%B5%E1%86%B8%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%83%E1%85%A9%E1%86%BC.jpg?raw=true',
+                    password: '1919독립',
+                    objects: [ { id: 'obj1', pos: { top: '50%', left: '25%', width: '7%', height: '10%' }, puzzle: '이 종이의 이름은 무엇일까요? (초성힌트: ㄷㄹㅅㅇㅅ)', answer: '독립선언서', hint: '이 방의 비밀번호와는 직접적인 관련이 없는 단서이다.', validation: { type: 'length', value: 5 } } ],
+                    eraPuzzles: [ { id: 'era1', puzzle: '3.1운동이 일어난 연도는? (숫자 4자리)', answer: '1919', hint: "비밀번호의 앞 4자리는 [ 1919 ] 이다.", validation: { type: 'regex', value: /^\d{4}$/ } }, { id: 'era2', puzzle: '3.1운동의 목적은 무엇일까요? (조선의 OO)', answer: '독립', hint: "비밀번호의 뒤 2글자는 [ 독립 ] 이다.", validation: { type: 'length', value: 2 } } ]
+                },
+                {
+                    name: '두 번째 방: 고구려의 기상',
+                    image: 'https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%89%E1%85%AE%E1%84%85%E1%85%A7%E1%86%B8%E1%84%83%E1%85%A9.jpg?raw=true',
+                    password: '391',
+                    objects: [ { id: 'obj1', pos: { top: '30%', left: '5%', width: '30%', height: '50%' }, puzzle: "고구려 역사상 가장 넓은 영토를 차지했던 왕의 이름은 '광개토대왕'입니다. 그의 이름에서 숫자 3에 해당하는 글자는 무엇일까요?", answer: '광', hint: "비밀번호의 첫 번째 숫자는 [ 3 ] 이다." }, { id: 'obj2', pos: { top: '55%', left: '60%', width: '25%', height: '30%' }, puzzle: "광개토대왕의 아들로, 아버지의 업적을 기리는 비석을 세운 왕은 누구일까요?", answer: '장수왕', hint: "장수왕이 왕위에 있었던 기간(79년)에서 70을 빼면? 비밀번호의 두 번째 숫자는 [ 9 ] 이다." } ],
+                    eraPuzzles: [ { id: 'era1', puzzle: "광개토대왕이 왕위에 오른 해는 몇 년일까요?", answer: '391', hint: "비밀번호의 세 번째 숫자는 [ 1 ] 이다." } ]
+                },
+                {
+                    name: '세 번째 방: 과학의 발전',
+                    image: 'https://github.com/Jungi-Choi/escape_room/blob/main/%E1%84%8E%E1%85%B3%E1%86%A8%E1%84%8B%E1%85%AE%E1%84%80%E1%85%B5.png?raw=true',
+                    password: '1443',
+                    objects: [ { id: 'obj1', pos: { top: '20%', left: '30%', width: '40%', height: '60%' }, puzzle: "사진 속 '측우기'가 발명된 연도의 앞 두 자리는 무엇일까요?", answer: '14', hint: "비밀번호의 앞 두 자리는 [ 14 ] 이다." }, { id: 'obj2', pos: { top: '5%', left: '5%', width: '20%', height: '30%' }, puzzle: "세종대왕이 한글을 반포한 해는 1446년입니다. 측우기가 발명된 해(1441년)와 몇 년 차이가 날까요?", answer: '5', hint: "비밀번호의 세 번째 숫자는 [ 4 ]이다. (5-1)" } ],
+                    eraPuzzles: [ { id: 'era1', puzzle: "세종대왕 시대의 또 다른 위대한 과학 발명품으로, 스스로 시간을 알려주는 물시계의 이름은 무엇일까요?", answer: '자격루', hint: "세종대왕이 훈민정음을 창제한 해는 144[ 3 ]년이다." } ]
+                }
+            ];
+
+            // DOM 요소
+            const startScreen = document.getElementById('start-screen');
+            const gameContainer = document.getElementById('game-container');
+            const startButton = document.getElementById('start-button');
+            const recordText = document.getElementById('record-text');
+            const roomTitle = document.getElementById('room-title');
+            const roomImage = document.getElementById('room-image');
+            const objectsContainer = document.getElementById('objects-container');
+            const hintsList = document.getElementById('hints-list');
+            const passwordInput = document.getElementById('password-input');
+            const passwordSubmit = document.getElementById('password-submit');
+            const eraClueButton = document.getElementById('era-clue-button');
+            const timerDisplay = document.getElementById('timer');
+            const transitionOverlay = document.getElementById('transition-overlay');
+            const wrongAnswerCounter = document.getElementById('wrong-answer-counter');
+            const gameOverScreen = document.getElementById('game-over-screen');
+            const restartFromGameOverButton = document.getElementById('restart-from-game-over');
+
+            // 게임 상태 변수
+            let currentRoomIndex = 0;
+            let solvedPuzzles = [];
+            let timerInterval;
+            let elapsedSeconds = 0;
+            let bestRecord = JSON.parse(localStorage.getItem('bestRecord')) || { name: null, time: Infinity };
+            let wrongAnswerCount = 0;
+            const MAX_WRONG_ANSWERS = 4;
+
+            // --- 유틸리티 함수 ---
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                return `${mins}:${secs}`;
+            };
+
+            const updateBestRecordDisplay = () => {
+                if (bestRecord.name) {
+                    recordText.textContent = `${bestRecord.name} - ${formatTime(bestRecord.time)}`;
+                } else {
+                    recordText.textContent = '아직 기록이 없습니다.';
+                }
+            };
+
+            const getValidatedInput = (puzzle, validation) => {
+                let userAnswer;
+                while (true) {
+                    userAnswer = prompt(puzzle);
+                    if (userAnswer === null) return null;
+                    let isValid = true;
+                    let errorMsg = '';
+                    if (validation) {
+                        if (validation.type === 'length' && userAnswer.length !== validation.value) {
+                            isValid = false;
+                            errorMsg = `${validation.value}글자로 입력해주세요.`;
+                        } else if (validation.type === 'regex' && !validation.value.test(userAnswer)) {
+                            isValid = false;
+                            errorMsg = '형식에 맞게 입력해주세요. (예: 4자리 숫자)';
+                        }
+                    }
+                    if (isValid) return userAnswer;
+                    alert(errorMsg);
+                }
+            };
+
+            const updateEraClueButtonState = () => {
+                const room = gameData[currentRoomIndex];
+                const remainingClues = room.eraPuzzles.filter(p => !solvedPuzzles.includes(p.id)).length;
+                eraClueButton.textContent = `단서 (${remainingClues})`;
+                eraClueButton.disabled = (remainingClues === 0);
+            };
+
+            const updateWrongAnswerDisplay = () => {
+                wrongAnswerCounter.textContent = `틀린 횟수: ${wrongAnswerCount} / ${MAX_WRONG_ANSWERS}`;
+            };
+
+            // --- 타이머 함수 ---
+            const startTimer = () => {
+                elapsedSeconds = 0;
+                timerDisplay.textContent = formatTime(elapsedSeconds);
+                timerInterval = setInterval(() => {
+                    elapsedSeconds++;
+                    timerDisplay.textContent = formatTime(elapsedSeconds);
+                }, 1000);
+            };
+
+            const stopTimer = () => clearInterval(timerInterval);
+
+            // --- 게임 흐름 함수 ---
+            const startGame = () => {
+                startScreen.style.display = 'none';
+                gameContainer.style.display = 'block';
+                currentRoomIndex = 0;
+                wrongAnswerCount = 0;
+                updateWrongAnswerDisplay();
+                startTimer();
+                loadRoom(currentRoomIndex);
+            };
+
+            const endGame = () => {
+                stopTimer();
+                alert(`탈출 성공! 기록: ${formatTime(elapsedSeconds)}`);
+                if (elapsedSeconds < bestRecord.time) {
+                    const name = prompt(`최고 기록 갱신! 이름을 입력해주세요:`);
+                    if (name) {
+                        bestRecord = { name, time: elapsedSeconds };
+                        localStorage.setItem('bestRecord', JSON.stringify(bestRecord));
+                        alert(`${name}님의 새로운 최고 기록이 저장되었습니다!`);
+                    }
+                }
+                gameContainer.style.display = 'none';
+                startScreen.style.display = 'flex';
+                updateBestRecordDisplay();
+            };
+
+            const triggerGameOver = () => {
+                stopTimer();
+                gameContainer.style.display = 'none';
+                gameOverScreen.style.display = 'flex';
+            };
+
+            const loadRoom = (roomIndex) => {
+                hintsList.innerHTML = '';
+                objectsContainer.innerHTML = '';
+                passwordInput.value = '';
+                solvedPuzzles = [];
+                const room = gameData[roomIndex];
+                roomTitle.textContent = room.name;
+                roomImage.src = room.image;
+                updateEraClueButtonState();
+                room.objects.forEach(obj => {
+                    const objElement = document.createElement('div');
+                    objElement.className = 'clickable-object';
+                    Object.assign(objElement.style, obj.pos);
+                    objElement.addEventListener('click', () => handleObjectClick(obj));
+                    objectsContainer.appendChild(objElement);
+                    obj.element = objElement;
+                });
+            };
+            
+            const transitionToNextRoom = () => {
+                transitionOverlay.classList.add('active');
+                setTimeout(() => {
+                    currentRoomIndex++;
+                    loadRoom(currentRoomIndex);
+                    transitionOverlay.classList.remove('active');
+                }, 600);
+            };
+
+            // --- 이벤트 핸들러 ---
+            const handlePuzzleSolved = (puzzle) => {
+                alert('정답입니다! 힌트를 획득했습니다.');
+                const hintElement = document.createElement('li');
+                hintElement.textContent = puzzle.hint;
+                hintsList.appendChild(hintElement);
+                solvedPuzzles.push(puzzle.id);
+            };
+
+            const handleWrongAnswer = () => {
+                wrongAnswerCount++;
+                updateWrongAnswerDisplay();
+                if (wrongAnswerCount >= MAX_WRONG_ANSWERS) {
+                    setTimeout(triggerGameOver, 100);
+                } else {
+                    alert('오답입니다. 다시 시도해 보세요.');
+                }
+            };
+
+            const handleObjectClick = (obj) => {
+                if (solvedPuzzles.includes(obj.id)) {
+                    alert('이미 해결한 문제입니다.');
+                    return;
+                }
+                const userAnswer = getValidatedInput(obj.puzzle, obj.validation);
+                if (userAnswer === null) return;
+
+                if (userAnswer.toLowerCase().trim() === obj.answer.toLowerCase().trim()) {
+                    handlePuzzleSolved(obj);
+                    obj.element.classList.add('solved');
+                } else {
+                    handleWrongAnswer();
+                }
+            };
+            
+            const handleEraClueClick = () => {
+                const room = gameData[currentRoomIndex];
+                const unsolvedPuzzle = room.eraPuzzles.find(p => !solvedPuzzles.includes(p.id));
+                if (!unsolvedPuzzle) {
+                    alert('이곳의 모든 단서를 찾았습니다.');
+                    return;
+                }
+                const userAnswer = getValidatedInput(unsolvedPuzzle.puzzle, unsolvedPuzzle.validation);
+                if (userAnswer === null) return;
+
+                if (userAnswer.toLowerCase().trim() === unsolvedPuzzle.answer.toLowerCase().trim()) {
+                    handlePuzzleSolved(unsolvedPuzzle);
+                    updateEraClueButtonState();
+                } else {
+                    handleWrongAnswer();
+                }
+            };
+
+            const checkPassword = () => {
+                const room = gameData[currentRoomIndex];
+                if (passwordInput.value.trim() === room.password) {
+                    if (currentRoomIndex < gameData.length - 1) {
+                        alert('정답! 다음 방으로 이동합니다.');
+                        transitionToNextRoom();
+                    } else {
+                        endGame();
+                    }
+                } else {
+                    alert('비밀번호가 틀렸습니다.');
+                }
+            };
+
+            // --- 초기화 및 이벤트 리스너 연결 ---
+            startButton.addEventListener('click', startGame);
+            passwordSubmit.addEventListener('click', checkPassword);
+            eraClueButton.addEventListener('click', handleEraClueClick);
+            passwordInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') checkPassword();
+            });
+            restartFromGameOverButton.addEventListener('click', () => {
+                gameOverScreen.style.display = 'none';
+                startScreen.style.display = 'flex';
+            });
+
+            updateBestRecordDisplay();
+        });
+    </script>
+
+</body>
+</html>
